@@ -12,7 +12,9 @@ class SelectionScreen extends StatefulWidget {
 }
 
 class _SelectionScreenState extends State<SelectionScreen> {
-  List? timezones;
+  List<String>? timezones;
+
+  bool showSearchbox = false;
 
   getZones() async {
     SharedPreferences sp = await SharedPreferences.getInstance();
@@ -38,6 +40,16 @@ class _SelectionScreenState extends State<SelectionScreen> {
         backgroundColor: Colors.indigo[900],
         automaticallyImplyLeading: false,
         centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                showSearchbox = !showSearchbox;
+              });
+            },
+            icon: Icon(Icons.search),
+          )
+        ],
         title: Center(
           child: Text(
             "Pick a location",
@@ -47,9 +59,16 @@ class _SelectionScreenState extends State<SelectionScreen> {
       body: Container(
         child: Stack(children: [
           (timezones != null)
-              ? ListView(
-                  children:
-                      timezones!.map((e) => ZoneListItem(name: e)).toList())
+              ? AnimatedPadding(
+                  duration: Duration(milliseconds: 200),
+                  padding: showSearchbox
+                      ? EdgeInsets.only(top: 80.0)
+                      : EdgeInsets.only(top: 0.0),
+                  child: ListView(
+                    children:
+                        timezones!.map((e) => ZoneListItem(name: e)).toList(),
+                  ),
+                )
               : Center(child: CupertinoActivityIndicator()),
           Align(
             alignment: Alignment.bottomCenter,
@@ -66,10 +85,70 @@ class _SelectionScreenState extends State<SelectionScreen> {
                 ),
               ),
             ),
-          )
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18.0),
+            child: AnimatedContainer(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 10.0),
+                  child: TextField(
+                    onChanged: (text) {
+                      if (text == "") {
+                        getZones();
+                      } else {
+                        searchIn(timezones!, text);
+                      }
+                    },
+                    decoration: InputDecoration(
+                        hintText: "Search...", border: InputBorder.none),
+                  ),
+                ),
+              ),
+              duration: Duration(milliseconds: 200),
+              alignment: Alignment.topCenter,
+              width: double.infinity,
+              height: showSearchbox ? 60 : 0,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Colors.grey[100],
+                boxShadow: [
+                  showSearchbox
+                      ? BoxShadow(
+                          blurRadius: 5,
+                          spreadRadius: 3,
+                          color: Colors.grey,
+                        )
+                      : BoxShadow(
+                          blurRadius: 0,
+                          spreadRadius: 0,
+                          color: Colors.grey,
+                        )
+                ],
+              ),
+            ),
+          ),
         ]),
       ),
     );
+  }
+
+  void searchIn(List<String> data, String a) {
+    List<String> result = [];
+    for (var i = 0; i < data.length; i++) {
+      String str = data[i];
+      List<String> keywords = str.split("/");
+      if (keywords[0].toLowerCase().contains('$a')) {
+        result.add(data[i]);
+      } else if (keywords.length == 2) {
+        if (keywords[1].toLowerCase().contains('$a')) {
+          result.add(data[i]);
+        }
+      }
+    }
+    setState(() {
+      timezones = result;
+    });
   }
 }
 
